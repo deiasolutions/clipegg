@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClipEgg Demo - Copy References, Not Payloads</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 3rem;
+    }
+    .header h1 {
+      font-size: 3rem;
+      margin: 0 0 0.5rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    .header .tagline {
+      font-size: 1.3rem;
+      opacity: 0.95;
+      font-weight: 300;
+    }
+    .header .description {
+      margin-top: 1rem;
+      font-size: 1rem;
+      opacity: 0.9;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .instructions {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #667eea;
+    }
+    .instructions ol {
+      margin: 0.5rem 0;
+      padding-left: 1.5rem;
+    }
+    .instructions li {
+      margin: 0.5rem 0;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1.3rem;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .panel .section-desc {
+      color: #666;
+      font-size: 0.9rem;
+      margin: 0.5rem 0 1rem;
+      font-style: italic;
+    }
+
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: white;
+      position: relative;
+    }
+    .item:hover {
+      border-color: #667eea;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+    }
+    .item.copied {
+      border-color: #4caf50;
+      background: #f1f8f4;
+    }
+    .item.copied::after {
+      content: "Copied!";
+      position: absolute;
+      top: -8px;
+      right: 8px;
+      background: #4caf50;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      animation: fadeOut 2s forwards;
+    }
+    @keyframes fadeOut {
+      0%, 50% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .item img {
+      width: 56px;
+      height: 56px;
+      object-fit: cover;
+      border-radius: 6px;
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+    }
+    .item-icon {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 6px;
+    }
+    .item-info { flex: 1; }
+    .item-label {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+    .item-type {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-right: 6px;
+    }
+    .item-uri {
+      font-size: 0.75rem;
+      color: #888;
+      font-family: monospace;
+    }
+    .item-meta {
+      font-size: 0.75rem;
+      color: #999;
+      margin-top: 2px;
+    }
+    .item.expired {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .item.expired::before {
+      content: "EXPIRED";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #ff5252;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      font-weight: bold;
+    }
+
+    .paste-zone {
+      min-height: 250px;
+      border: 3px dashed #ccc;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #999;
+      transition: all 0.3s ease;
+      background: #fafafa;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+    .paste-zone:focus {
+      outline: none;
+      border-color: #667eea;
+      background: #f0f3ff;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+    .paste-zone.pasting {
+      border-color: #4caf50;
+      background: #f1f8f4;
+      animation: pulse 0.5s;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+    .paste-zone.has-content {
+      display: block;
+      padding: 1rem;
+      color: #333;
+      text-align: left;
+    }
+
+    .egg-display {
+      background: #2d3748;
+      color: #a0aec0;
+      padding: 1rem;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin: 0.5rem 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .egg-display .key { color: #9f7aea; }
+    .egg-display .string { color: #48bb78; }
+    .egg-display .number { color: #f6ad55; }
+
+    .stats {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #e8f5e9;
+      border-left: 4px solid #4caf50;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .stats.bad {
+      background: #ffebee;
+      border-left-color: #f44336;
+    }
+    .stats.warning {
+      background: #fff3e0;
+      border-left-color: #ff9800;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+    .comparison-table th,
+    .comparison-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .comparison-table th {
+      background: #f5f5f5;
+      font-weight: 600;
+      color: #667eea;
+    }
+    .comparison-table .good {
+      color: #4caf50;
+      font-weight: 600;
+    }
+    .comparison-table .bad {
+      color: #f44336;
+    }
+
+    .context-demo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .context-target {
+      padding: 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      min-height: 120px;
+      background: #fafafa;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .context-target:hover {
+      border-color: #667eea;
+      background: #f0f3ff;
+    }
+    .context-target.active {
+      border-color: #4caf50;
+      background: #f1f8f4;
+    }
+    .context-target h4 {
+      margin: 0 0 0.5rem;
+      color: #667eea;
+      font-size: 0.9rem;
+    }
+    .context-target .target-content {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    .feature-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-top: 4px solid #667eea;
+    }
+    .feature-card h3 {
+      margin-top: 0;
+      color: #667eea;
+      font-size: 1.1rem;
+    }
+    .feature-card p {
+      color: #666;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .copy-feedback {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #4caf50;
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+      display: none;
+    }
+    .copy-feedback.show {
+      display: block;
+    }
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🥚 ClipEgg</h1>
+    <div class="tagline">Copy references, not payloads.</div>
+    <div class="description">
+      A lightweight clipboard protocol that transmits URIs instead of heavy data payloads.
+      Perfect for cross-application workflows, drag-and-drop alternatives, and efficient data sharing.
+    </div>
+  </div>
+
+  <div class="instructions">
+    <h3>How to Use This Demo</h3>
+    <ol>
+      <li><strong>Select any item</strong> from the sections below (click and drag to select, or triple-click)</li>
+      <li><strong>Copy it</strong> using Ctrl+C (or Cmd+C on Mac)</li>
+      <li><strong>Click a paste zone</strong> and paste using Ctrl+V (or Cmd+V on Mac)</li>
+      <li><strong>Watch the magic</strong> - see how ClipEgg transmits only a tiny reference instead of the full payload!</li>
+    </ol>
+  </div>
+
+  <div class="demo-grid">
+    <!-- Products Section -->
+    <div class="panel">
+      <h2>🛍️ E-Commerce Products</h2>
+      <p class="section-desc">Product catalog items with images and metadata</p>
+
+      <div class="item egg-item"
+           data-uri="https://store.example.com/products/headphones-pro-2024"
+           data-label="Wireless Headphones Pro"
+           data-type="product"
+           data-thumb="https://picsum.photos/seed/headphones/100/100"
+           data-meta='{"price":"$299","sku":"WHP-2024-BLK","inStock":true}'>
+        <img src="https://picsum.photos/seed/headphones/100/100" alt="">
+        <div class="item-info">
+          <div class="item-label">Wireless Headphones Pro</div>
+          <div class="item-type">product</div>
+          <div class="item-uri">products/headphones-pro-2024</div>
+          <div class="item-meta">$299 • SKU: WHP-2024-BLK</div>
+        </div>
+      </div>
+
+      <div class="item egg-item"
+           data-uri="https://store.example.com/products/smart-watch-ultra"
+           data-label="Smart Watch Ultra"
+           data-type="product"
+           data-thumb="https://picsum.photos/seed/watch/100/100"
+           data-meta='{"price":"$499","sku":"SWU-2024-SLV","inStock":false}'>
+        <img src="https://picsum.photos/seed/watch/100/100" alt="">
+        <div class="item-info">
+          <div class="item-label">Smart Watch Ultra</div>
+          <div class="item-type">product</div>
+          <div class="item-uri">products/smart-watch-ultra</div>
+          <div class="item-meta">$499 • Out of Stock</div>
+        </div>
+      </div>
+
+      <div class="item egg-item"
+           data-uri="https://store.example.com/products/laptop-stand-aluminum"
+           data-label="Aluminum Laptop Stand"
+           data-type="product"
+           data-thumb="https://picsum.photos/seed/stand/100/100"
+           data-meta='{"price":"$79","sku":"ALS-2024","inStock":true}'>
+        <img src="https://picsum.photos/seed/stand/100/100" alt="">
+        <div class="item-info">
+          <div class="item-label">Aluminum Laptop Stand</div>
+          <div class="item-type">product</div>
+          <div class="item-uri">products/laptop-stand-aluminum</div>
+          <div class="item-meta">$79 • In Stock</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documents Section -->
+    <div class="panel">
+      <h2>📄 Documents & Files</h2>
+      <p class="section-desc">Various document types with file metadata</p>
+
+      <div class="item egg-item"
+           data-uri="https://docs.example.com/documents/q4-2024-planning"
+           data-label="Q4 2024 Strategic Planning"
+           data-type="document"
+           data-thumb="https://picsum.photos/seed/doc1/100/100"
+           data-meta='{"size":"2.4 MB","pages":45,"format":"PDF"}'>
+        <img src="https://picsum.photos/seed/doc1/100/100" alt="">
+        <div class="item-info">
+          <div class="item-label">Q4 2024 Strategic Planning</div>
+          <div class="item-type">document</div>
+          <div class="item-uri">documents/q4-2024-planning</div>
+          <div class="item-meta">2.4 MB • 45 pages • PDF</div>
+        </div>
+      </div>
+
+      <div class="item egg-item"
+           data-uri="https://docs.example.com/spreadsheets/revenue-analysis-2024"
+           data-label="Revenue Analysis Spreadsheet"
+           data-type="spreadsheet"
+           data-thumb="https://picsum.photos/seed/sheet/100/100"
+           data-meta='{"size":"856 KB","sheets":12,"format":"XLSX"}'>
+        <div class="item-icon">📊</div>
+        <div class="item-info">
+          <div class="item-label">Revenue Analysis Spreadsheet</div>
+          <div class="item-type">spreadsheet</div>
+          <div class="item-uri">spreadsheets/revenue-analysis-2024</div>
+          <div class="item-meta">856 KB • 12 sheets • XLSX</div>
+        </div>
+      </div>
+
+      <div class="item egg-item"
+           data-uri="https://docs.example.com/presentations/product-launch-deck"
+           data-label="Product Launch Presentation"
+           data-type="presentation"
+           data-thumb="https://picsum.photos/seed/present/100/100"
+           data-meta='{"size":"15.2 MB","slides":32,"format":"PPTX"}'>
+        <div class="item-icon">📽️</div>
+        <div class="item-info">
+          <div class="item-label">Product Launch Presentation</div>
+          <div class="item-type">presentation</div>
+          <div class="item-uri">presentations/product-launch-deck</div>
+          <div class="item-meta">15.2 MB • 32 slides • PPTX</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users & Contacts Section -->
+    <div class="panel">
+      <h2>👥 Users & Contacts</h2>
+      <p class="section-desc">User profiles and contact information</p>
+
+      <div class="item egg-item"
+           data-uri="https://app.example.com/users/alice.chen"
+           data-label="Alice Chen"
+           data-type="user"
+           data-thumb="https://picsum.photos/seed/alice/100/100"
+           data-meta='{"role":"Engineering Manager","team":"Platform","email":"alice.chen@example.com"}'>
+        <img src="https://picsum.photos/seed/alice/100/100" alt="">
+        <div class="item-info">
+          <div class="item-label">Alice Chen</div>
+          <div class="item-type">user</div>
+          <div class="item-uri">users/alice.chen</div>
+          <div class="item-meta">Engineering Manager • Platform Team</div>
+        </div>
+      </div>
+
+      <div class="item egg-item"
+           data-uri="https://app.example.com/users/bob.martinez"
+           data-label="Bob Martinez"
+           data-type="user"
+           data-thumb="https://picsum.photos/seed/bob/100/100"
+           data-meta='{"role":"Product Designer","team":"UX","email":"bob.martinez@example.com"}'>
+        <img src="https://picsum.photos/seed/bob/100/100" alt="">
+        <div class="item-info">
+          <div class="item-label">Bob Martinez</div>
+          <div class="item-type">user</div>
+          <div class="item-uri">users/bob.martinez</div>
+          <div class="item-meta">Product Designer • UX Team</div>
+        </div>
+      </div>
+
+      <div class="item egg-item"
+           data-uri="https://app.example.com/users/carol.johnson"
+           data-label="Carol Johnson"
+           data-type="user"
+           data-thumb="https://picsum.photos/seed/carol/100/100"
+           data-meta='{"role":"VP Sales","team":"Revenue","email":"carol.johnson@example.com"}'>
+        <img src="https://picsum.photos/seed/carol/100/100" alt="">
+        <div class="item-info">
+          <div class="item-label">Carol Johnson</div>
+          <div class="item-type">user</div>
+          <div class="item-uri">users/carol.johnson</div>
+          <div class="item-meta">VP Sales • Revenue Team</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Media Assets Section -->
+    <div class="panel">
+      <h2>🎨 Media Assets</h2>
+      <p class="section-desc">Images, videos, and design files</p>
+
+      <div class="item egg-item"
+           data-uri="https://assets.example.com/images/hero-banner-2024.png"
+           data-label="Hero Banner Image"
+           data-type="image"
+           data-thumb="https://picsum.photos/seed/banner/100/100"
+           data-meta='{"size":"3.2 MB","dimensions":"1920x1080","format":"PNG"}'>
+        <img src="https://picsum.photos/seed/banner/100/100" alt="">
+        <div class="item-info">
+          <div class="item-label">Hero Banner Image</div>
+          <div class="item-type">image</div>
+          <div class="item-uri">images/hero-banner-2024.png</div>
+          <div class="item-meta">3.2 MB • 1920x1080 • PNG</div>
+        </div>
+      </div>
+
+      <div class="item egg-item"
+           data-uri="https://assets.example.com/videos/product-demo-v2.mp4"
+           data-label="Product Demo Video"
+           data-type="video"
+           data-meta='{"size":"145 MB","duration":"3:45","format":"MP4"}'>
+        <div class="item-icon">🎬</div>
+        <div class="item-info">
+          <div class="item-label">Product Demo Video</div>
+          <div class="item-type">video</div>
+          <div class="item-uri">videos/product-demo-v2.mp4</div>
+          <div class="item-meta">145 MB • 3:45 • MP4</div>
+        </div>
+      </div>
+
+      <div class="item egg-item"
+           data-uri="https://assets.example.com/design/logo-package.fig"
+           data-label="Brand Logo Package"
+           data-type="design"
+           data-meta='{"size":"8.7 MB","artboards":24,"format":"Figma"}'>
+        <div class="item-icon">🎨</div>
+        <div class="item-info">
+          <div class="item-label">Brand Logo Package</div>
+          <div class="item-type">design</div>
+          <div class="item-uri">design/logo-package.fig</div>
+          <div class="item-meta">8.7 MB • 24 artboards • Figma</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Time-Sensitive Items -->
+    <div class="panel">
+      <h2>⏰ Time-Based Expiration Demo</h2>
+      <p class="section-desc">Items with expiration - try copying after they expire!</p>
+
+      <div class="item egg-item" id="temp-item-1"
+           data-uri="https://temp.example.com/share/abc123"
+           data-label="Temporary Share Link (10s)"
+           data-type="temp-link"
+           data-expiry="10"
+           data-meta='{"expires":"10 seconds","created":"just now"}'>
+        <div class="item-icon">⏱️</div>
+        <div class="item-info">
+          <div class="item-label">Temporary Share Link (10s)</div>
+          <div class="item-type">temp-link</div>
+          <div class="item-uri">share/abc123</div>
+          <div class="item-meta">Expires in: <span class="countdown">10</span> seconds</div>
+        </div>
+      </div>
+
+      <div class="item egg-item" id="temp-item-2"
+           data-uri="https://temp.example.com/access/xyz789"
+           data-label="Limited Access Token (30s)"
+           data-type="access-token"
+           data-expiry="30"
+           data-meta='{"expires":"30 seconds","scope":"read-only"}'>
+        <div class="item-icon">🔐</div>
+        <div class="item-info">
+          <div class="item-label">Limited Access Token (30s)</div>
+          <div class="item-type">access-token</div>
+          <div class="item-uri">access/xyz789</div>
+          <div class="item-meta">Expires in: <span class="countdown">30</span> seconds</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Records -->
+    <div class="panel">
+      <h2>💾 Data Records</h2>
+      <p class="section-desc">Database records and structured data</p>
+
+      <div class="item egg-item"
+           data-uri="https://api.example.com/customers/cust_98765"
+           data-label="Acme Corporation"
+           data-type="customer"
+           data-meta='{"industry":"Technology","employees":5000,"revenue":"$50M"}'>
+        <div class="item-icon">🏢</div>
+        <div class="item-info">
+          <div class="item-label">Acme Corporation</div>
+          <div class="item-type">customer</div>
+          <div class="item-uri">customers/cust_98765</div>
+          <div class="item-meta">Technology • 5000 employees • $50M revenue</div>
+        </div>
+      </div>
+
+      <div class="item egg-item"
+           data-uri="https://api.example.com/orders/ord_44556"
+           data-label="Order #44556"
+           data-type="order"
+           data-meta='{"total":"$1,249.99","items":3,"status":"shipped"}'>
+        <div class="item-icon">📦</div>
+        <div class="item-info">
+          <div class="item-label">Order #44556</div>
+          <div class="item-type">order</div>
+          <div class="item-uri">orders/ord_44556</div>
+          <div class="item-meta">$1,249.99 • 3 items • Shipped</div>
+        </div>
+      </div>
+
+      <div class="item egg-item"
+           data-uri="https://api.example.com/reports/sales-summary-2024-q3"
+           data-label="Q3 2024 Sales Summary"
+           data-type="report"
+           data-meta='{"period":"Q3 2024","records":15234,"generated":"2024-10-01"}'>
+        <div class="item-icon">📈</div>
+        <div class="item-info">
+          <div class="item-label">Q3 2024 Sales Summary</div>
+          <div class="item-type">report</div>
+          <div class="item-uri">reports/sales-summary-2024-q3</div>
+          <div class="item-meta">Q3 2024 • 15,234 records</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paste Zones Section -->
+  <div class="panel" style="margin-bottom: 2rem;">
+    <h2>📥 Paste Zones</h2>
+    <p class="section-desc">Click any zone and paste to see ClipEgg in action</p>
+
+    <div class="demo-grid">
+      <div>
+        <h3 style="margin-top: 0; color: #667eea;">General Paste Zone</h3>
+        <div class="paste-zone" id="paste-zone-1" tabindex="0">Click here, then Ctrl+V</div>
+        <div id="stats-1"></div>
+      </div>
+
+      <div>
+        <h3 style="margin-top: 0; color: #667eea;">Products Only Zone</h3>
+        <div class="paste-zone" id="paste-zone-2" tabindex="0" data-accept="product">Click here, then Ctrl+V</div>
+        <div id="stats-2"></div>
+      </div>
+
+      <div>
+        <h3 style="margin-top: 0; color: #667eea;">Documents Only Zone</h3>
+        <div class="paste-zone" id="paste-zone-3" tabindex="0" data-accept="document,spreadsheet,presentation">Click here, then Ctrl+V</div>
+        <div id="stats-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison Section -->
+  <div class="panel" style="margin-bottom: 2rem;">
+    <h2>📊 ClipEgg vs Traditional Clipboard</h2>
+    <p class="section-desc">See the dramatic difference in payload size</p>
+
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Content Type</th>
+          <th>Traditional Clipboard</th>
+          <th>ClipEgg</th>
+          <th>Reduction</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Product with Image</td>
+          <td class="bad">~50 KB - 500 KB</td>
+          <td class="good">~200 bytes</td>
+          <td class="good">99.6% smaller</td>
+        </tr>
+        <tr>
+          <td>Document (PDF)</td>
+          <td class="bad">2.4 MB - 10 MB</td>
+          <td class="good">~250 bytes</td>
+          <td class="good">99.99% smaller</td>
+        </tr>
+        <tr>
+          <td>Video File</td>
+          <td class="bad">50 MB - 500 MB</td>
+          <td class="good">~220 bytes</td>
+          <td class="good">99.999% smaller</td>
+        </tr>
+        <tr>
+          <td>User Profile</td>
+          <td class="bad">~10 KB - 100 KB</td>
+          <td class="good">~280 bytes</td>
+          <td class="good">99.7% smaller</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Key Features -->
+  <div class="panel">
+    <h2>✨ Key Features</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3>🪶 Ultra-Lightweight</h3>
+        <p>Transmit only URIs and minimal metadata. Typical payload: 200-500 bytes vs 50KB-500MB for rich clipboard data.</p>
+      </div>
+
+      <div class="feature-card">
+        <h3>🔗 Reference-Based</h3>
+        <p>Copy references to data, not the data itself. Perfect for large files, databases, and remote resources.</p>
+      </div>
+
+      <div class="feature-card">
+        <h3>🎯 Context-Aware</h3>
+        <p>Paste zones can filter by content type. Paste a product in a product list, a document in a file manager.</p>
+      </div>
+
+      <div class="feature-card">
+        <h3>⏱️ Time-Sensitive</h3>
+        <p>Support for expiring links and temporary access tokens. Security built-in.</p>
+      </div>
+
+      <div class="feature-card">
+        <h3>🔄 Fallback Support</h3>
+        <p>Graceful degradation to text/uri-list and text/html for non-ClipEgg applications.</p>
+      </div>
+
+      <div class="feature-card">
+        <h3>🚀 Framework-Agnostic</h3>
+        <p>Pure JavaScript. Works with React, Vue, Angular, or vanilla JS. No dependencies.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="copy-feedback" id="copy-feedback">
+    ✓ Copied to clipboard!
+  </div>
+
+  <script type="module">
+    import clipegg from './src/clipegg.js';
+
+    // Register extractor for our items
+    clipegg.register('.egg-item', (el) => {
+      const meta = el.dataset.meta ? JSON.parse(el.dataset.meta) : null;
+      return {
+        uri: el.dataset.uri,
+        label: el.dataset.label,
+        type: el.dataset.type,
+        thumb: el.dataset.thumb || null,
+        meta: meta
+      };
+    });
+
+    // Add visual feedback for copy
+    document.querySelectorAll('.egg-item').forEach(item => {
+      item.addEventListener('copy', (e) => {
+        // Don't show feedback for expired items
+        if (item.classList.contains('expired')) {
+          e.preventDefault();
+          alert('This item has expired and cannot be copied!');
+          return;
+        }
+
+        item.classList.add('copied');
+        setTimeout(() => item.classList.remove('copied'), 2000);
+
+        // Show global feedback
+        const feedback = document.getElementById('copy-feedback');
+        feedback.classList.add('show');
+        setTimeout(() => feedback.classList.remove('show'), 2000);
+      });
+    });
+
+    // Setup paste zones
+    const setupPasteZone = (zoneId, statsId) => {
+      const pasteZone = document.getElementById(zoneId);
+      const statsEl = document.getElementById(statsId);
+      const acceptTypes = pasteZone.dataset.accept ? pasteZone.dataset.accept.split(',') : null;
+
+      clipegg.onPaste((egg, e) => {
+        // Type filtering for specific zones
+        if (acceptTypes && !acceptTypes.includes(egg.type)) {
+          pasteZone.classList.add('pasting');
+          setTimeout(() => pasteZone.classList.remove('pasting'), 500);
+
+          statsEl.innerHTML = `
+            <div class="stats warning">
+              <strong>⚠ Wrong content type!</strong><br>
+              This zone only accepts: ${acceptTypes.join(', ')}<br>
+              You tried to paste: ${egg.type}
+            </div>
+          `;
+          return;
+        }
+
+        if (e.target.closest(`#${zoneId}`)) {
+          pasteZone.classList.add('pasting');
+          setTimeout(() => pasteZone.classList.remove('pasting'), 500);
+
+          pasteZone.classList.add('has-content');
+
+          // Format the egg display with syntax highlighting
+          const eggJson = JSON.stringify(egg, null, 2)
+            .replace(/"([^"]+)":/g, '<span class="key">"$1"</span>:')
+            .replace(/: "([^"]+)"/g, ': <span class="string">"$1"</span>')
+            .replace(/: (\d+)/g, ': <span class="number">$1</span>');
+
+          pasteZone.innerHTML = `
+            <strong>✓ Received ClipEgg:</strong>
+            <div class="egg-display">${eggJson}</div>
+          `;
+
+          const eggSize = new Blob([JSON.stringify(egg)]).size;
+          const metaSize = egg.meta ? JSON.stringify(egg.meta).length : 0;
+
+          // Estimate what traditional clipboard would be
+          let estimatedTraditional = '50 KB - 500 KB';
+          if (egg.type === 'video') estimatedTraditional = '50 MB - 500 MB';
+          else if (egg.type === 'document' || egg.type === 'presentation') estimatedTraditional = '2 MB - 10 MB';
+          else if (egg.type === 'image') estimatedTraditional = '500 KB - 5 MB';
+
+          statsEl.innerHTML = `
+            <div class="stats">
+              <strong>✓ ClipEgg payload:</strong> ${eggSize} bytes<br>
+              <strong>Metadata:</strong> ${metaSize} bytes<br>
+              <strong>Traditional clipboard:</strong> ${estimatedTraditional}<br>
+              <strong>Type:</strong> ${egg.type}<br>
+              <em>Transmitted only a reference - the actual ${egg.type} stays on the server!</em>
+            </div>
+          `;
+        }
+      });
+
+      // Handle raw paste (non-egg)
+      pasteZone.addEventListener('paste', (e) => {
+        if (!e.defaultPrevented && e.target.closest(`#${zoneId}`)) {
+          const types = [...e.clipboardData.types];
+          let totalSize = 0;
+          types.forEach(t => {
+            totalSize += new Blob([e.clipboardData.getData(t)]).size;
+          });
+
+          pasteZone.classList.add('has-content');
+          pasteZone.innerHTML = `
+            <strong>Raw clipboard (no ClipEgg):</strong>
+            <div class="egg-display">Types: ${types.join(', ')}\nTotal size: ${totalSize} bytes</div>
+          `;
+          statsEl.innerHTML = `
+            <div class="stats bad">
+              <strong>✗ Raw payload:</strong> ${totalSize} bytes<br>
+              <strong>Formats:</strong> ${types.length} different clipboard formats<br>
+              <em>This is traditional clipboard data - much larger!</em>
+            </div>
+          `;
+        }
+      });
+    };
+
+    // Setup all paste zones
+    setupPasteZone('paste-zone-1', 'stats-1');
+    setupPasteZone('paste-zone-2', 'stats-2');
+    setupPasteZone('paste-zone-3', 'stats-3');
+
+    // Activate ClipEgg
+    clipegg.activate();
+
+    // Time-based expiration demo
+    const setupExpiration = (itemId, seconds) => {
+      const item = document.getElementById(itemId);
+      const countdownEl = item.querySelector('.countdown');
+      let remaining = seconds;
+
+      const timer = setInterval(() => {
+        remaining--;
+        countdownEl.textContent = remaining;
+
+        if (remaining <= 0) {
+          clearInterval(timer);
+          item.classList.add('expired');
+          countdownEl.textContent = 'EXPIRED';
+        }
+      }, 1000);
+    };
+
+    setupExpiration('temp-item-1', 10);
+    setupExpiration('temp-item-2', 30);
+
+    console.log('🥚 ClipEgg Demo Ready!');
+    console.log('Try copying any item and pasting into a paste zone.');
+  </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "name": "clipegg",
+  "version": "0.1.0",
+  "description": "Lightweight clipboard protocol. Copy references, not payloads.",
+  "main": "dist/clipegg.cjs.js",
+  "module": "src/clipegg.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/clipegg.js",
+      "require": "./dist/clipegg.cjs.js"
+    }
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "test": "node --test test/clipegg.test.js",
+    "test:watch": "node --test --watch test/clipegg.test.js",
+    "build": "rollup -c",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "clipboard",
+    "copy",
+    "paste",
+    "lightweight",
+    "reference",
+    "egg",
+    "protocol"
+  ],
+  "author": "Annelise Corporation",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/annelise-corp/clipegg.git"
+  },
+  "devDependencies": {
+    "rollup": "^4.0.0"
+  }
+}
