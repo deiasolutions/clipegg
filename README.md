@@ -1,5 +1,10 @@
 # 🥚 ClipEgg
 
+[![npm version](https://img.shields.io/npm/v/clipegg.svg)](https://www.npmjs.com/package/clipegg)
+[![npm downloads](https://img.shields.io/npm/dm/clipegg.svg)](https://www.npmjs.com/package/clipegg)
+[![license](https://img.shields.io/npm/l/clipegg.svg)](https://github.com/deiasolutions/clipegg/blob/master/LICENSE)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/clipegg)](https://bundlephobia.com/package/clipegg)
+
 **Copy references, not payloads.**
 
 ---
