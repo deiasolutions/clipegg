@@ -34,7 +34,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/annelise-corp/clipegg.git"
+    "url": "https://github.com/deiasolutions/clipegg.git"
   },
   "devDependencies": {
     "rollup": "^4.0.0"
