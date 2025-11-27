@@ -84,7 +84,16 @@ An egg is a JSON object with the following fields:
 | `hydrate` | string | no | Explicit hydration endpoint if different from `uri` |
 | `auth` | string | no | Auth hint (e.g., `bearer`, `cookie`, `none`) |
 
-### 3.2 Example
+### 3.2 Copy vs Cut Semantics
+
+ClipEgg supports both copy and cut operations with distinct behaviors:
+
+- **Copy** means "here's a reference" — The egg represents a pointer to content that remains at its origin
+- **Cut** means "take the whole thing" — The egg represents content that will be removed from its origin upon paste
+
+**Important:** Cut does not imply purchase or license transfer—it is a destructive move of content from source to destination.
+
+### 3.3 Example
 
 ```json
 {
@@ -104,7 +113,7 @@ An egg is a JSON object with the following fields:
 }
 ```
 
-### 3.3 Size Constraints
+### 3.4 Size Constraints
 
 Eggs SHOULD NOT exceed 1024 bytes when serialized as JSON. This ensures clipboard operations remain lightweight regardless of source content size.
 
